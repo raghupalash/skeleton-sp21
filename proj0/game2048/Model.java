@@ -114,14 +114,16 @@ public class Model extends Observable {
         // for the tilt to the Side SIDE. If the board changed, set the
         // changed local variable to true
         board.setViewingPerspective(side);
-        System.out.println(side);
-        System.out.println(board);
-        printTile(board);
+
         // Order of execution is necessary.
         boolean changed1 = pullAndMerge();
-        System.out.println(changed1);
         boolean changed2 = moveOnNull();
-        changed = true;
+        if (changed1 == true || changed2 == true) {
+            changed = true;
+        }
+        else {
+            changed = false;
+        }
         board.setViewingPerspective(Side.NORTH);
 
         checkGameOver();
@@ -131,22 +133,6 @@ public class Model extends Observable {
         return changed;
     }
 
-    /** Prints every tile of the board */
-    public boolean printTile(Board board) {
-        for (int r = 0; r < board.size(); r++) {
-            for (int c = 0; c < board.size(); c++){
-                Tile my_tile = tile(c, r);
-                if (my_tile == null)
-                    continue;
-                System.out.print(String.format("Originally at (c:%d,r:%d) ", c, r));
-                System.out.print(String.format("Showing at (c:%d, r:%d) ", my_tile.col(), my_tile.row()));
-                System.out.print(my_tile.value());
-            }
-            System.out.println();
-        }
-        return false;
-    }
-
     /** Direction 'superior' tiles pull and merge the inferior tiles */
     public boolean pullAndMerge() {
         // I think we just have to change position of the tile from inferior to superior
@@ -154,13 +140,9 @@ public class Model extends Observable {
         for (int r = board.size() - 1; r >= 0; r--)
             for (int c = board.size() - 1; c >= 0; c--) {
                 Tile tileSuperior = board.tile(c, r);
-                System.out.print("Tile superior: ");
-                System.out.println(tileSuperior);
                 if (tileSuperior == null) continue;
                 // Find the closest element
                 Tile tileInferior = closestTile(r, c);
-                System.out.print("Tile inferior: ");
-                System.out.println(tileInferior);
                 if (tileInferior == null) continue;
                 if (tileSuperior.value() == tileInferior.value()) {
                     // Go ahead and merge these two tiles
@@ -183,15 +165,19 @@ public class Model extends Observable {
 
     /** moves a tile if there are empty spaces */
     public boolean moveOnNull() {
+        boolean changed = false;
         for (int r = board.size() - 1; r >= 0; r--) {
             for (int c = board.size() - 1; c >= 0; c--) {
                 Tile tile = board.tile(c, r);
                 if (tile == null) continue;
                 int steps = count_steps(r, c);
+                if (steps == 0)
+                    continue;
                 board.move(c, r +  steps, tile(c, r));
+                changed = true;
             }
         }
-        return true;
+        return changed;
     }
 
     public int count_steps(int row, int column) {
