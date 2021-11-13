@@ -112,13 +112,96 @@ public class Model extends Observable {
 
         // TODO: Modify this.board (and perhaps this.score) to account
         // for the tilt to the Side SIDE. If the board changed, set the
-        // changed local variable to true.
+        // changed local variable to true
+        board.setViewingPerspective(side);
+        System.out.println(side);
+        System.out.println(board);
+        printTile(board);
+        // Order of execution is necessary.
+        boolean changed1 = pullAndMerge();
+        System.out.println(changed1);
+        boolean changed2 = moveOnNull();
+        changed = true;
+        board.setViewingPerspective(Side.NORTH);
 
         checkGameOver();
         if (changed) {
             setChanged();
         }
         return changed;
+    }
+
+    /** Prints every tile of the board */
+    public boolean printTile(Board board) {
+        for (int r = 0; r < board.size(); r++) {
+            for (int c = 0; c < board.size(); c++){
+                Tile my_tile = tile(c, r);
+                if (my_tile == null)
+                    continue;
+                System.out.print(String.format("Originally at (c:%d,r:%d) ", c, r));
+                System.out.print(String.format("Showing at (c:%d, r:%d) ", my_tile.col(), my_tile.row()));
+                System.out.print(my_tile.value());
+            }
+            System.out.println();
+        }
+        return false;
+    }
+
+    /** Direction 'superior' tiles pull and merge the inferior tiles */
+    public boolean pullAndMerge() {
+        // I think we just have to change position of the tile from inferior to superior
+        boolean changed = false;
+        for (int r = board.size() - 1; r >= 0; r--)
+            for (int c = board.size() - 1; c >= 0; c--) {
+                Tile tileSuperior = board.tile(c, r);
+                System.out.print("Tile superior: ");
+                System.out.println(tileSuperior);
+                if (tileSuperior == null) continue;
+                // Find the closest element
+                Tile tileInferior = closestTile(r, c);
+                System.out.print("Tile inferior: ");
+                System.out.println(tileInferior);
+                if (tileInferior == null) continue;
+                if (tileSuperior.value() == tileInferior.value()) {
+                    // Go ahead and merge these two tiles
+                    board.move(c, r, tileInferior);
+                    this.score += tile(c, r).value();
+                    changed = true;
+                }
+            }
+        return changed; // change to false
+    }
+
+    /** Finds the tile closest to given tile in downwards direction */
+    public Tile closestTile(int row, int col) {
+        for (int r = row - 1; r >= 0; r--) {
+            Tile closestTile = board.tile(col, r);
+            if (closestTile != null) return closestTile;
+        }
+        return null;
+    }
+
+    /** moves a tile if there are empty spaces */
+    public boolean moveOnNull() {
+        for (int r = board.size() - 1; r >= 0; r--) {
+            for (int c = board.size() - 1; c >= 0; c--) {
+                Tile tile = board.tile(c, r);
+                if (tile == null) continue;
+                int steps = count_steps(r, c);
+                board.move(c, r +  steps, tile(c, r));
+            }
+        }
+        return true;
+    }
+
+    public int count_steps(int row, int column) {
+        int count = 0;
+        for(int i = row + 1; i < board.size(); i++) {
+            if (board.tile(column, i) == null) {
+                count++;
+            }
+        }
+        return count;
     }
 
     /** Checks if the game is over and sets the gameOver variable
@@ -152,8 +235,9 @@ public class Model extends Observable {
     public static boolean maxTileExists(Board b) {
         for (int i = 0; i < b.size(); i++)
             for (int j = 0; j < b.size(); j++) {
-                if (b.tile(i, j) == null) continue;
-                if (b.tile(i, j).value() == MAX_PIECE)
+                Tile tile = b.tile(i, j);
+                if (tile == null) continue;
+                if (tile.value() == MAX_PIECE)
                     return true;
             }
         return false;
